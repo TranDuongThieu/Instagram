@@ -3,12 +3,17 @@ package com.hcmute.instagram;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
@@ -19,31 +24,81 @@ import com.hcmute.instagram.Search.SearchFragment;
 import com.hcmute.instagram.home.HomeFragment;
 import com.hcmute.instagram.R;
 
-public class Home extends AppCompatActivity implements BottomNavigationView.OnNavigationItemSelectedListener {
+import java.util.ArrayList;
+
+import de.hdodenhof.circleimageview.CircleImageView;
+
+public class Home extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        ArrayList<ImageView> imageList = new ArrayList<>();
+        imageList.add(findViewById(R.id.action_home));
+        imageList.add(findViewById(R.id.action_search));
+        imageList.add(findViewById(R.id.action_post));
+        imageList.add(findViewById(R.id.action_video));
+        CircleImageView avt = findViewById(R.id.action_profile);
 
-        BottomNavigationView navigationView = findViewById(R.id.insta_bottom_navigation);
-        navigationView.setOnNavigationItemSelectedListener(this);
-
-        // Load HomeFragment by default
-        loadFragment(new HomeFragment());
+        avt.setAlpha(0.6f);
+        setActive(imageList, findViewById(R.id.action_home));
+        replaceFragment(new HomeFragment());
     }
 
-    private boolean loadFragment(Fragment fragment) {
-        if (fragment != null) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();
-            return true;
+    public void onItemClick(View view) {
+        ImageView clickedImageView = (ImageView) view;
+        ArrayList<ImageView> imageList = new ArrayList<>();
+        imageList.add(findViewById(R.id.action_home));
+        imageList.add(findViewById(R.id.action_search));
+        imageList.add(findViewById(R.id.action_post));
+        imageList.add(findViewById(R.id.action_video));
+        CircleImageView avt = findViewById(R.id.action_profile);
+        if (clickedImageView == imageList.get(0)) {
+            replaceFragment(new HomeFragment());
+        } else if (clickedImageView == imageList.get(1)) {
+            replaceFragment(new SearchFragment());
+        } else if (clickedImageView == imageList.get(2)) {
+            startActivity(new Intent(Home.this, PostActivity.class));
+        } else if (clickedImageView == imageList.get(3)) {
+//            replaceFragment(new ReelFragment());
         }
-        return false;
+        avt.setAlpha(0.6f);
+        setActive(imageList, clickedImageView);
+
     }
 
-    @Override
-    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-        Fragment fragment = null;
+    public void onItemClick2(View view) {
+        CircleImageView clickedImageView = (CircleImageView) view;
+        ArrayList<ImageView> imageList = new ArrayList<>();
+        imageList.add(findViewById(R.id.action_home));
+        imageList.add(findViewById(R.id.action_search));
+        imageList.add(findViewById(R.id.action_post));
+        imageList.add(findViewById(R.id.action_video));
+        CircleImageView avt = findViewById(R.id.action_profile);
+        avt.setAlpha(1.0f);
+        for (ImageView imageView : imageList) {
+            imageView.setAlpha(0.6f);
+        }
+        replaceFragment(new ProfileFragment());
+    }
+
+    private void setActive(ArrayList<ImageView> imgList, ImageView active) {
+        for (ImageView imageView : imgList) {
+            imageView.setAlpha(imageView == active ? 1.0f : 0.6f);
+        }
+    }
+
+    private void replaceFragment(Fragment fragment) {
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.replace(R.id.frameMainLayout, fragment);
+        fragmentTransaction.commit();
+    }
+
+//    @Override
+//    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+//        Fragment fragment = null;
 //        switch (item.getItemId()) {
 //            case R.id.Home:
 //                fragment = new HomeFragment();
@@ -66,9 +121,9 @@ public class Home extends AppCompatActivity implements BottomNavigationView.OnNa
 //                fragment = new ProfileFragment();
 //                break;
 //        }
-        // Load the selected fragment
-        return loadFragment(fragment);
-    }
+    // Load the selected fragment
+//        return loadFragment(fragment);
+//    }
 
     @Override
     public void onBackPressed() {
