@@ -87,7 +87,7 @@ public class EditProfile extends AppCompatActivity {
                             Users user = documentSnapshot.toObject(Users.class);
                             name.setText(user.getFullName());
                             username.setText(user.getUsername());
-                            bio.setText(user.getDiscription());
+                            bio.setText(user.getDescription());
                             website.setText(user.getWebsite());
                             Glide.with(EditProfile.this)
                                     .load(user.getProfilePhoto())
@@ -143,73 +143,61 @@ public class EditProfile extends AppCompatActivity {
                 Bio = bio.getText().toString().trim();
                 Website = website.getText().toString().trim();
 
-                DatabaseReference ref = FirebaseDatabase.getInstance().getReference();
-                ref.child("Users").orderByChild("Username").equalTo(Username).addListenerForSingleValueEvent(new ValueEventListener() {
+                DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users");
+
+                // Check if the username already exists
+                userRef.orderByChild("username").equalTo(Username).addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if(snapshot.exists()){
-                            Toast.makeText(EditProfile.this, "Username already exists. Please try other username.", Toast.LENGTH_SHORT).show();
-                        }else{
-                            useridd = FirebaseAuth.getInstance().getCurrentUser().getUid();
-                            data = FirebaseDatabase.getInstance().getReference("Users").child(useridd);
-                            data.addListenerForSingleValueEvent(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(@NonNull DataSnapshot snapshot) { final ProgressDialog mDialog = new ProgressDialog(EditProfile.this);
-                                    mDialog.setCancelable(false);
-                                    mDialog.setCanceledOnTouchOutside(false);
-                                    mDialog.setMessage("Updating please wait...");
-                                    mDialog.show();
-                                    data.child("fullName").setValue(Name);
-                                    data.child("username").setValue(Username);
-                                    data.child("discription").setValue(Bio);
-                                    data.child("website").setValue(Website);
-                                    // Set profile photo
-                                    if (imageUri != null) {
+                        if (snapshot.exists()) {
+                            Toast.makeText(EditProfile.this, "Username already exists. Please try another username.", Toast.LENGTH_SHORT).show();
+                        } else {
+                            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                            DatabaseReference currentUserRef = userRef.child(userId);
 
-                                        reff = storageReference.child("photos/users/"+"/"+useridd+"/profilephoto");
-                                        reff.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            // Update user profile
+                            currentUserRef.child("fullName").setValue(Name);
+                            currentUserRef.child("username").setValue(Username);
+                            currentUserRef.child("description").setValue(Bio);
+                            currentUserRef.child("website").setValue(Website);
 
+                            // Set profile photo if imageUri is not null
+                            if (imageUri != null) {
+                                StorageReference storageRef = FirebaseStorage.getInstance().getReference();
+                                StorageReference profilePhotoRef = storageRef.child("photos/users/" + userId + "/profilephoto");
+
+                                profilePhotoRef.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                                    @Override
+                                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                        profilePhotoRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
                                             @Override
-                                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                                reff.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                                                    @Override
-                                                    public void onSuccess(Uri uri) {
-                                                        data.child("profilePhoto").setValue(uri.toString());
-
-
-                                                    }
-                                                });
-
+                                            public void onSuccess(Uri uri) {
+                                                currentUserRef.child("profilePhoto").setValue(uri.toString());
                                             }
                                         });
-
                                     }
+                                }).addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        // Handle failure
+                                    }
+                                });
+                            }
 
-
-                                    mDialog.dismiss();
-                                    Toast.makeText(EditProfile.this, "Profile Updated Successfully!", Toast.LENGTH_SHORT).show();
-                                    startActivity(new Intent(EditProfile.this,Account_Settings.class));
-                                    finish();
-
-                                }
-
-                                @Override
-                                public void onCancelled(@NonNull DatabaseError error) {
-
-                                }
-                            });
-
-
+                            // Show success message and navigate to Account Settings activity
+                            Toast.makeText(EditProfile.this, "Profile Updated Successfully!", Toast.LENGTH_SHORT).show();
+                            startActivity(new Intent(EditProfile.this, Account_Settings.class));
+                            finish();
                         }
                     }
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError error) {
-
+                        // Handle onCancelled
                     }
                 });
-
             }
+
         });
 
     }

@@ -5,13 +5,13 @@ import android.os.Parcelable;
 
 public class Users implements Parcelable {
 
-    private String Discription, Followers, Following, FullName, Posts, ProfilePhoto, Username, Website,User_id;
+    private String Description, Followers, Following, FullName, Posts, ProfilePhoto, Username, Website,User_id;
 
     public Users() {
     }
 
-    public Users(String discription, String followers, String following, String fullName, String posts, String profilePhoto, String username, String website, String user_id) {
-        Discription = discription;
+    public Users(String Description, String followers, String following, String fullName, String posts, String profilePhoto, String username, String website, String user_id) {
+        Description = Description;
         Followers = followers;
         Following = following;
         FullName = fullName;
@@ -23,7 +23,7 @@ public class Users implements Parcelable {
     }
 
     protected Users(Parcel in) {
-        Discription = in.readString();
+        Description = in.readString();
         Followers = in.readString();
         Following = in.readString();
         FullName = in.readString();
@@ -36,7 +36,7 @@ public class Users implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(Discription);
+        dest.writeString(Description);
         dest.writeString(Followers);
         dest.writeString(Following);
         dest.writeString(FullName);
@@ -64,12 +64,12 @@ public class Users implements Parcelable {
         }
     };
 
-    public String getDiscription() {
-        return Discription;
+    public String getDescription() {
+        return Description;
     }
 
-    public void setDiscription(String discription) {
-        Discription = discription;
+    public void setDescription(String Description) {
+        Description = Description;
     }
 
     public String getFollowers() {
@@ -139,7 +139,7 @@ public class Users implements Parcelable {
     @Override
     public String toString() {
         return "Users{" +
-                "Discription='" + Discription + '\'' +
+                "Description='" + Description + '\'' +
                 ", Followers='" + Followers + '\'' +
                 ", Following='" + Following + '\'' +
                 ", FullName='" + FullName + '\'' +

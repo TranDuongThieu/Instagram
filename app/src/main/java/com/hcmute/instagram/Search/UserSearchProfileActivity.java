@@ -175,7 +175,7 @@ public class UserSearchProfileActivity extends AppCompatActivity {
                 followers.setText(noFollowers);
                 followings.setText(noFollowings);
                 name.setText(user.getFullName());
-                description.setText(user.getDiscription());
+                description.setText(user.getDescription());
                 website.setText(user.getWebsite());
                 username.setText(user.getUsername());
                 Glide.with(UserSearchProfileActivity.this)

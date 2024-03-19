@@ -15,32 +15,52 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.bumptech.glide.Glide;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.hcmute.instagram.Like.LikeFragment;
 import com.hcmute.instagram.Post.PostActivity;
+import com.hcmute.instagram.Profile.EditProfile;
 import com.hcmute.instagram.Profile.ProfileFragment;
 import com.hcmute.instagram.Search.SearchFragment;
 import com.hcmute.instagram.home.HomeFragment;
 import com.hcmute.instagram.R;
+import com.hcmute.instagram.models.Users;
 
 import java.util.ArrayList;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
 public class Home extends AppCompatActivity {
+    CircleImageView avt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        final String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        DocumentReference userDocRef = db.collection("Users").document(userId);
         ArrayList<ImageView> imageList = new ArrayList<>();
         imageList.add(findViewById(R.id.action_home));
         imageList.add(findViewById(R.id.action_search));
         imageList.add(findViewById(R.id.action_post));
         imageList.add(findViewById(R.id.action_video));
         CircleImageView avt = findViewById(R.id.action_profile);
-
+        userDocRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+            @Override
+            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                Users user = documentSnapshot.toObject(Users.class);
+                Glide.with(Home.this)
+                        .load(user.getProfilePhoto())
+                        .into(avt);
+            }
+        });
         avt.setAlpha(0.6f);
         setActive(imageList, findViewById(R.id.action_home));
         replaceFragment(new HomeFragment());
