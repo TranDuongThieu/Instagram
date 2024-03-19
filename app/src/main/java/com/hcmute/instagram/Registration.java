@@ -21,6 +21,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.AuthResult;
@@ -30,6 +32,9 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.hbb20.CountryCodePicker;
 
 import java.util.Calendar;
@@ -42,15 +47,16 @@ import com.hcmute.instagram.models.privatedetails;
 public class Registration extends AppCompatActivity {
 
     TextView alreadyhaveacc;
-    TextInputLayout Fname,Username, Email, Pass, Mobileno,Gender,Description,Website;
+    TextInputLayout Fname, Username, Email, Pass, Mobileno, Gender, Description, Website;
     EditText Birth;
-    int year,month,day;
+    int year, month, day;
     Button register;
     CountryCodePicker Cpp;
     FirebaseAuth FAuth;
     DatabaseReference databaseReference;
+    CollectionReference usersCollectionRef;
     FirebaseDatabase firebaseDatabase;
-    String fname,username,email,pass,mobileno,gender,description,website,birth;
+    String fname, username, email, pass, mobileno, gender, description, website, birth;
     String useridd;
     AnimationDrawable anim;
 
@@ -59,8 +65,8 @@ public class Registration extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration);
 
-        alreadyhaveacc = (TextView)findViewById(R.id.AlreadyHavesignin);
-        Birth = (EditText)findViewById(R.id.birthdate);
+        alreadyhaveacc = (TextView) findViewById(R.id.AlreadyHavesignin);
+        Birth = (EditText) findViewById(R.id.birthdate);
         Fname = (TextInputLayout) findViewById(R.id.Fullname);
         Username = (TextInputLayout) findViewById(R.id.Username);
         Email = (TextInputLayout) findViewById(R.id.signup_email);
@@ -84,7 +90,6 @@ public class Registration extends AppCompatActivity {
 //******************************BACKGROUND ANIMATION*************************
 
 
-
         Birth.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -97,7 +102,7 @@ public class Registration extends AppCompatActivity {
                     public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
                         Birth.setText(dayOfMonth + "/" + (month + 1) + "/" + year);
                     }
-                },year,month,day);
+                }, year, month, day);
                 datePickerDialog.show();
 
             }
@@ -115,6 +120,8 @@ public class Registration extends AppCompatActivity {
 
         firebaseDatabase = FirebaseDatabase.getInstance();
         databaseReference = firebaseDatabase.getReference();
+        FirebaseFirestore firebaseFirestore = FirebaseFirestore.getInstance();
+        usersCollectionRef = firebaseFirestore.collection("Users");
         FAuth = FirebaseAuth.getInstance();
 //        useridd = FAuth.getCurrentUser().getUid();
 
@@ -132,15 +139,18 @@ public class Registration extends AppCompatActivity {
                 description = Description.getEditText().getText().toString().trim();
                 birth = Birth.getText().toString().trim();
                 website = Website.getEditText().getText().toString().trim();
-                if (isValid()) {
-                    Log.i("Log", "onClick: " + fname + username + email + mobileno + pass + gender);
 
-                    databaseReference.child("Users").orderByChild("Username").equalTo(username).addListenerForSingleValueEvent(new ValueEventListener() {
+                if (isValid()) {
+
+                    // Check if the username exists
+                    usersCollectionRef.whereEqualTo("Username", username).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                         @Override
-                        public void onDataChange(@NonNull DataSnapshot snapshot) {
-                            if(snapshot.exists()){
-                                Toast.makeText(Registration.this, "Username already exists. Please try other username.", Toast.LENGTH_SHORT).show();
-                            }else {
+                        public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                            if (!queryDocumentSnapshots.isEmpty()) {
+                                Toast.makeText(Registration.this, "Username already exists. Please try another username.", Toast.LENGTH_SHORT).show();
+                            } else {
+                                // Username is unique, proceed with registration
+
                                 final ProgressDialog mDialog = new ProgressDialog(Registration.this);
                                 mDialog.setCancelable(false);
                                 mDialog.setCanceledOnTouchOutside(false);
@@ -154,8 +164,8 @@ public class Registration extends AppCompatActivity {
 
                                             useridd = FAuth.getCurrentUser().getUid();
 
-                                            addUsers(description,fname,username,website);
-                                            addPrivateDetails(useridd,email,gender,birth,mobileno);
+                                            addUsers(description, fname, username, website);
+                                            addPrivateDetails(useridd, email, gender, birth, mobileno);
                                             addPasswords(pass);
 
                                             mDialog.dismiss();
@@ -199,24 +209,21 @@ public class Registration extends AppCompatActivity {
 
                                     }
                                 });
-
                             }
                         }
-
+                    }).addOnFailureListener(new OnFailureListener() {
                         @Override
-                        public void onCancelled(@NonNull DatabaseError error) {
-
+                        public void onFailure(@NonNull Exception e) {
+                            Log.d("Registration", "Error checking username existence", e);
                         }
                     });
-
                 }
-
-
-
             }
         });
 
+
     }
+
     String emailpattern = "[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+";
 
     public boolean isValid() {
@@ -235,7 +242,7 @@ public class Registration extends AppCompatActivity {
 //        Birth.setErrorEnabled(false);
 //        Birth.setError("");
 
-        boolean isValidname = false, isValidemail = false, isvalidpassword = false, isvalid = false, isvalidmobileno = false, isvalidgender = false , isvalidusername=false;
+        boolean isValidname = false, isValidemail = false, isvalidpassword = false, isvalid = false, isvalidmobileno = false, isvalidgender = false, isvalidusername = false;
         if (TextUtils.isEmpty(fname)) {
             Fname.setErrorEnabled(true);
             Fname.setError("Fullname is required");
@@ -281,53 +288,89 @@ public class Registration extends AppCompatActivity {
             Gender.setError("Field cannot be empty");
         } else {
             isvalidgender = true;
-        }if (TextUtils.isEmpty(username)) {
+        }
+        if (TextUtils.isEmpty(username)) {
             Username.setErrorEnabled(true);
             Username.setError("Field cannot be empty");
         } else {
             isvalidusername = true;
         }
 
-        isvalid = (isValidname  && isValidemail && isvalidpassword && isvalidmobileno &&  isvalidgender && isvalidusername) ? true : false;
+        isvalid = (isValidname && isValidemail && isvalidpassword && isvalidmobileno && isvalidgender && isvalidusername) ? true : false;
         return isvalid;
     }
 
-//******************************FUNCTIONS TO ADD DATA'S TO FIREBASE*************************
-    public void addUsers(String Discription,String FullName,String Username,String Website){
-
+    //******************************FUNCTIONS TO ADD DATA'S TO FIREBASE*************************
+    public void addUsers(String description, String fullName, String username, String website) {
         Users user = new Users(
-                Discription,
+                description,
                 "0",
                 "0",
-                FullName,
+                fullName,
                 "0",
                 "https://firebasestorage.googleapis.com/v0/b/instagram-clone-291e7.appspot.com/o/generalProfilePhoto%2Fdefualt_insta_pic.png?alt=media&token=e9834979-a141-48fd-87b6-a2074e7dbc9b",
-                Username,
-                Website,
+                username,
+                website,
                 useridd
         );
-        databaseReference.child("Users").child(useridd).setValue(user);
+        usersCollectionRef.document(useridd).set(user)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Log.d("Registration", "User document added successfully");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e("Registration", "Error adding user document", e);
+                    }
+                });
     }
-    public void addPrivateDetails(String user_id, String email, String gender, String birthdate, String phoneNumber){
 
+    public void addPrivateDetails(String userId, String email, String gender, String birthdate, String phoneNumber) {
         privatedetails details = new privatedetails(
-                user_id,
+                userId,
                 email,
                 gender,
                 birthdate,
                 phoneNumber
         );
-        databaseReference.child("Privatedetails").child(useridd).setValue(details);
+        usersCollectionRef.document(userId).collection("PrivateDetails").document().set(details)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Log.d("Registration", "Private details added successfully");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e("Registration", "Error adding private details", e);
+                    }
+                });
     }
-    public void addPasswords(String passwords){
 
+    public void addPasswords(String passwords) {
         Passwords pass = new Passwords(passwords);
-        databaseReference.child("Passwords").child(useridd).setValue(pass);
-
+        usersCollectionRef.document(useridd).collection("Passwords").document().set(pass)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Log.d("Registration", "Password added successfully");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e("Registration", "Error adding password", e);
+                    }
+                });
     }
+
 //*******************************************************************************
 
-//******************************BACKGROUND ANIMATION*************************
+    //******************************BACKGROUND ANIMATION*************************
     // Starting animation:- start the animation on onResume.
     @Override
     protected void onResume() {
