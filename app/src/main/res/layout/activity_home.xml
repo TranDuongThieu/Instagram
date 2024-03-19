@@ -1,81 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:context=".Home">
-  <FrameLayout
-      android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:id="@+id/fragment_container"
-      android:layout_above="@id/insta_bottom_navigation"/>
 
-  <com.google.android.material.bottomnavigation.BottomNavigationView
-      android:layout_width="match_parent"
-      android:layout_height="wrap_content"
-      android:id="@+id/insta_bottom_navigation"
-      android:layout_alignParentBottom="true"
-      android:background="?android:attr/windowBackground"
-      android:backgroundTint="@color/white"
-      app:itemTextColor="@color/menu_item_color"
-      app:itemIconTint="@color/menu_item_color"
-      app:menu="@menu/home_menu"
-      app:labelVisibilityMode="selected"/>
-<!--  <Toolbar-->
-<!--      android:layout_width="match_parent"-->
-<!--      android:layout_height="56dp"-->
-<!--      android:layout_alignParentTop="true"-->
-<!--      android:id="@+id/tabs"-->
-<!--      android:background="@color/white"-->
-<!--      android:minHeight="?attr/actionBarSize"-->
-<!--      android:theme="?attr/actionBarTheme"-->
-<!--      android:elevation="6dp"-->
-<!--      android:layout_alignParentStart="true">-->
+    <FrameLayout
+        android:id="@+id/frameMainLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 
-<!--    <LinearLayout-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="match_parent"-->
-<!--        android:orientation="horizontal"-->
-<!--        android:id="@+id/linearlayout">-->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@drawable/custom_bottom_nav_shadow"
+        android:orientation="horizontal">
 
-<!--      <ImageView-->
-<!--          android:layout_width="45dp"-->
-<!--          android:layout_height="wrap_content"-->
-<!--          android:src="@drawable/camera"-->
-<!--          android:layout_marginTop="5dp"-->
-<!--          android:layout_marginBottom="10dp"-->
-<!--          android:padding="5dp"-->
-<!--          app:tint="@color/textcolor"-->
-<!--          android:id="@+id/camera"/>-->
+        <ImageView
+            android:id="@+id/action_home"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:alpha="1"
+            android:onClick="onItemClick"
+            android:padding="12dp"
+            android:src="@drawable/home_icon" />
 
-<!--      <TextView-->
-<!--          android:layout_width="wrap_content"-->
-<!--          android:layout_height="wrap_content"-->
-<!--          android:layout_marginStart="95dp"-->
-<!--          android:layout_marginTop="5dp"-->
-<!--          android:layout_marginEnd="95dp"-->
-<!--          android:layout_marginBottom="10dp"-->
-<!--          android:fontFamily="@font/bilbo_swash_caps"-->
-<!--          android:text="Instagram"-->
-<!--          android:textColor="@color/black"-->
-<!--          android:textSize="30sp"-->
-<!--          android:textStyle="bold"/>-->
-<!--      <ImageView-->
-<!--          android:layout_width="45dp"-->
-<!--          android:layout_height="wrap_content"-->
-<!--          android:src="@drawable/send"-->
-<!--          android:layout_marginTop="5dp"-->
-<!--          android:layout_marginBottom="10dp"-->
-<!--          android:padding="5dp"-->
-<!--          app:tint="@color/textcolor"-->
-<!--          android:id="@+id/send"/>-->
+        <ImageView
+            android:id="@+id/action_search"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:alpha="1"
+            android:onClick="onItemClick"
+            android:padding="12dp"
+            android:src="@drawable/search_icon" />
 
-<!--    </LinearLayout>-->
+        <ImageView
+            android:id="@+id/action_post"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:alpha="1"
+            android:onClick="onItemClick"
+            android:padding="10dp"
+            android:src="@drawable/square_plus_icon" />
 
-<!--  </Toolbar>-->
+        <ImageView
+            android:id="@+id/action_video"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:alpha="1"
+            android:onClick="onItemClick"
+            android:padding="12dp"
+            android:src="@drawable/video_icon" />
+
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/action_profile"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_weight="1"
+            android:alpha="1"
+            android:onClick="onItemClick2"
+            android:padding="12dp"
+            android:src="@drawable/user_icon" />
 
 
+    </LinearLayout>
 
-  </RelativeLayout>
+</LinearLayout>

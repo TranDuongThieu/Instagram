@@ -4,6 +4,7 @@ import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -14,6 +15,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
@@ -22,6 +24,13 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
@@ -37,6 +46,8 @@ public class EditProfile extends AppCompatActivity {
     String Name,Username,Bio,Website,profile;
     DatabaseReference databaseReference,data;
     StorageReference storageReference,reff;
+    CollectionReference usersCollectionRef;
+
     TextView Email,Phonenumber,Gender,Birth;
     ImageView submit;
     String useridd;
@@ -63,43 +74,57 @@ public class EditProfile extends AppCompatActivity {
 
 
 //******************************RETRIEVING DATA***************************
-        final String userid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        databaseReference = FirebaseDatabase.getInstance().getReference("Users").child(userid);
-        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+        final String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+// Retrieving user data from Firestore
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        DocumentReference userDocRef = db.collection("Users").document(userId);
+        userDocRef.get()
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        if (documentSnapshot.exists()) {
+                            Users user = documentSnapshot.toObject(Users.class);
+                            name.setText(user.getFullName());
+                            username.setText(user.getUsername());
+                            bio.setText(user.getDiscription());
+                            website.setText(user.getWebsite());
+                            Glide.with(EditProfile.this)
+                                    .load(user.getProfilePhoto())
+                                    .into(mProfilePhoto);
+                        } else {
+                            Log.d("TAG", "No such document");
+                        }
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.d("TAG", "Error getting user document: " + e);
+                    }
+                });
+
+        CollectionReference privateDetailsCollectionRef = db.collection("Users").document(userId).collection("PrivateDetails");
+
+        privateDetailsCollectionRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                final Users user = snapshot.getValue(Users.class);
-                name.setText(user.getFullName());
-                username.setText(user.getUsername());
-                bio.setText(user.getDiscription());
-                website.setText(user.getWebsite());
-                Glide.with(EditProfile.this)
-                        .load(user.getProfilePhoto())
-                        .into(mProfilePhoto);
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                if (e != null) {
+                    Log.w("TAG", "Listen failed.", e);
+                    return;
+                }
 
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-
+                for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots.getDocuments()) {
+                    privatedetails privateDetails = documentSnapshot.toObject(privatedetails.class);
+                    // Assuming you have only one document in "PrivateDetails" subcollection
+                    Email.setText(privateDetails.getEmail());
+                    Phonenumber.setText(privateDetails.getPhoneNumber());
+                    Gender.setText(privateDetails.getGender());
+                    Birth.setText(privateDetails.getBirthdate());
+                }
             }
         });
-        FirebaseDatabase.getInstance().getReference("Privatedetails")
-                .child(userid).addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                final privatedetails privatedetail = snapshot.getValue(privatedetails.class);
-                Email.setText(privatedetail.getEmail());
-                Phonenumber.setText(privatedetail.getPhoneNumber());
-                Gender.setText(privatedetail.getGender());
-                Birth.setText(privatedetail.getBirthdate());
-            }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-
-            }
-        });
 //************************************************************************
 
 
@@ -113,9 +138,6 @@ public class EditProfile extends AppCompatActivity {
         submit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-
-
                 Name = name.getText().toString().trim();
                 Username = username.getText().toString().trim();
                 Bio = bio.getText().toString().trim();
