@@ -31,10 +31,12 @@ import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.auth.User;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
+import com.hcmute.instagram.Login;
 import com.hcmute.instagram.R;
 import com.hcmute.instagram.models.Users;
 import com.hcmute.instagram.models.privatedetails;
@@ -42,32 +44,32 @@ import com.hcmute.instagram.models.privatedetails;
 public class EditProfile extends AppCompatActivity {
 
     ImageView mProfilePhoto;
-    TextInputEditText name,username,bio,website;
-    String Name,Username,Bio,Website,profile;
-    DatabaseReference databaseReference,data;
-    StorageReference storageReference,reff;
+    TextInputEditText name, username, bio, website;
+    String Name, Username, Bio, Website, profile;
+    DatabaseReference databaseReference, data;
+    StorageReference storageReference, reff;
     CollectionReference usersCollectionRef;
-
-    TextView Email,Phonenumber,Gender,Birth;
+    FirebaseFirestore db;
+    TextView Email, Phonenumber, Gender, Birth;
     ImageView submit;
     String useridd;
-    int PICK_IMAGE_REQUEST=1;
+    int PICK_IMAGE_REQUEST = 1;
     Uri imageUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_profile);
-        mProfilePhoto = (ImageView)findViewById(R.id.user_img);
+        mProfilePhoto = (ImageView) findViewById(R.id.user_img);
         name = (TextInputEditText) findViewById(R.id.Namee);
-        username = (TextInputEditText)findViewById(R.id.Usernamee);
-        bio = (TextInputEditText)findViewById(R.id.Bioo);
-        website = (TextInputEditText)findViewById(R.id.Websitee);
-        submit = (ImageView)findViewById(R.id.rightt);
-        Email = (TextView)findViewById(R.id.email);
-        Phonenumber = (TextView)findViewById(R.id.phonenumber);
-        Gender = (TextView)findViewById(R.id.gender);
-        Birth = (TextView)findViewById(R.id.birth);
+        username = (TextInputEditText) findViewById(R.id.Usernamee);
+        bio = (TextInputEditText) findViewById(R.id.Bioo);
+        website = (TextInputEditText) findViewById(R.id.Websitee);
+        submit = (ImageView) findViewById(R.id.rightt);
+        Email = (TextView) findViewById(R.id.email);
+        Phonenumber = (TextView) findViewById(R.id.phonenumber);
+        Gender = (TextView) findViewById(R.id.gender);
+        Birth = (TextView) findViewById(R.id.birth);
 
 
         storageReference = FirebaseStorage.getInstance().getReference();
@@ -134,7 +136,6 @@ public class EditProfile extends AppCompatActivity {
                 openFileChooser();
             }
         });
-
         submit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -142,77 +143,139 @@ public class EditProfile extends AppCompatActivity {
                 Username = username.getText().toString().trim();
                 Bio = bio.getText().toString().trim();
                 Website = website.getText().toString().trim();
-
-                DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users");
+                DocumentReference userRefDoc = db.collection("Users").document(userId);
 
                 // Check if the username already exists
-                userRef.orderByChild("username").equalTo(Username).addListenerForSingleValueEvent(new ValueEventListener() {
+                final ProgressDialog mDialog = new ProgressDialog(EditProfile.this);
+                mDialog.setCanceledOnTouchOutside(false);
+                mDialog.setCancelable(false);
+                mDialog.setMessage("Updating...");
+                mDialog.show();
+
+                userRefDoc.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if (snapshot.exists()) {
-                            Toast.makeText(EditProfile.this, "Username already exists. Please try another username.", Toast.LENGTH_SHORT).show();
-                        } else {
-                            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-                            DatabaseReference currentUserRef = userRef.child(userId);
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        if (documentSnapshot.exists()) {
+                            String userNameGet = documentSnapshot.getString("username");
+                            db.collection("Users")
+                                    .whereEqualTo("username", Username)
+                                    .whereNotEqualTo("user_id", userId)
+                                    .get()
+                                    .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                        @Override
+                                        public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+//                                                String uidGet = queryDocumentSnapshots
+                                            if (!queryDocumentSnapshots.isEmpty()) {
+                                                // Username already exists
+                                                Toast.makeText(getApplicationContext(), "Username already exists. Please try another username.", Toast.LENGTH_SHORT).show();
+                                            } else {
+                                                // Username is available, update user information
+                                                userRefDoc.update("fullName", Name,
+                                                                "username", Username,
+                                                                "description", Bio)
+                                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                            @Override
+                                                            public void onSuccess(Void aVoid) {
+                                                                Log.i("SUBMIT", "onSuccess: " + Name + Username);
+                                                                mDialog.dismiss();
 
-                            // Update user profile
-                            currentUserRef.child("fullName").setValue(Name);
-                            currentUserRef.child("username").setValue(Username);
-                            currentUserRef.child("description").setValue(Bio);
-                            currentUserRef.child("website").setValue(Website);
+                                                                Toast.makeText(getApplicationContext(), "User information updated successfully!", Toast.LENGTH_SHORT).show();
+                                                                // You can perform further actions after updating user information here
+                                                            }
+                                                        })
+                                                        .addOnFailureListener(new OnFailureListener() {
+                                                            @Override
+                                                            public void onFailure(@NonNull Exception e) {
+                                                                mDialog.dismiss();
 
-                            // Set profile photo if imageUri is not null
-                            if (imageUri != null) {
-                                StorageReference storageRef = FirebaseStorage.getInstance().getReference();
-                                StorageReference profilePhotoRef = storageRef.child("photos/users/" + userId + "/profilephoto");
-
-                                profilePhotoRef.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                                    @Override
-                                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                        profilePhotoRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                                            @Override
-                                            public void onSuccess(Uri uri) {
-                                                currentUserRef.child("profilePhoto").setValue(uri.toString());
+                                                                Log.e("Error", "Error updating user information: " + e.getMessage());
+                                                            }
+                                                        });
                                             }
-                                        });
-                                    }
-                                }).addOnFailureListener(new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        // Handle failure
-                                    }
-                                });
-                            }
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            mDialog.dismiss();
+                                            
+                                            Log.e("Error", "Error checking username existence: " + e.getMessage());
+                                        }
+                                    });
 
-                            // Show success message and navigate to Account Settings activity
-                            Toast.makeText(EditProfile.this, "Profile Updated Successfully!", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(EditProfile.this, Account_Settings.class));
-                            finish();
                         }
                     }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        // Handle onCancelled
-                    }
                 });
+
+                DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users");
+//                userRef.orderByChild("username").equalTo(Username).addListenerForSingleValueEvent(new ValueEventListener() {
+//                    @Override
+//                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+//                        if (snapshot.exists()) {
+//                            Toast.makeText(EditProfile.this, "Username already exists. Please try another username.", Toast.LENGTH_SHORT).show();
+//                        } else {
+//                            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+//                            DatabaseReference currentUserRef = userRef.child(userId);
+//
+//                            // Update user profile
+//                            currentUserRef.child("fullName").setValue(Name);
+//                            currentUserRef.child("username").setValue(Username);
+//                            currentUserRef.child("description").setValue(Bio);
+//                            currentUserRef.child("website").setValue(Website);
+//
+//                            // Set profile photo if imageUri is not null
+//                            if (imageUri != null) {
+//                                StorageReference storageRef = FirebaseStorage.getInstance().getReference();
+//                                StorageReference profilePhotoRef = storageRef.child("photos/users/" + userId + "/profilephoto");
+//
+//                                profilePhotoRef.putFile(imageUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+//                                    @Override
+//                                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+//                                        profilePhotoRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+//                                            @Override
+//                                            public void onSuccess(Uri uri) {
+//                                                currentUserRef.child("profilePhoto").setValue(uri.toString());
+//                                            }
+//                                        });
+//                                    }
+//                                }).addOnFailureListener(new OnFailureListener() {
+//                                    @Override
+//                                    public void onFailure(@NonNull Exception e) {
+//                                        // Handle failure
+//                                    }
+//                                });
+//                            }
+//
+//                            // Show success message and navigate to Account Settings activity
+//                            Toast.makeText(EditProfile.this, "Profile Updated Successfully!", Toast.LENGTH_SHORT).show();
+//                            startActivity(new Intent(EditProfile.this, Account_Settings.class));
+//                            finish();
+//                        }
+//                    }
+//
+//                    @Override
+//                    public void onCancelled(@NonNull DatabaseError error) {
+//                        // Handle onCancelled
+//                    }
+//                });
             }
 
         });
 
     }
+
     private void openFileChooser() {
         Intent intent = new Intent();
         intent.setType("image/*");
         intent.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(intent,PICK_IMAGE_REQUEST);
+        startActivityForResult(intent, PICK_IMAGE_REQUEST);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
 
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK
-                && data != null && data.getData() != null){
+                && data != null && data.getData() != null) {
             imageUri = data.getData();
             mProfilePhoto.setImageURI(imageUri);
 
@@ -220,7 +283,6 @@ public class EditProfile extends AppCompatActivity {
 
         super.onActivityResult(requestCode, resultCode, data);
     }
-
 
 
 //        https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.vexels.com%2Fpng-svg%2Fpreview%2F147102%2Finstagram-profile-icon&psig=AOvVaw0Liq2WBgqkhzMz_UQkcP5T&ust=1600009441788000&source=images&cd=vfe&ved=0CAIQjRxqFwoTCIiNu-nx4-sCFQAAAAAdAAAAABAD
