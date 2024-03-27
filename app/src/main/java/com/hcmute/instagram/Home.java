@@ -25,6 +25,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.hcmute.instagram.Like.LikeFragment;
 import com.hcmute.instagram.Post.PostActivity;
+import com.hcmute.instagram.Profile.Account_Settings;
 import com.hcmute.instagram.Profile.EditProfile;
 import com.hcmute.instagram.Profile.ProfileFragment;
 import com.hcmute.instagram.Search.SearchFragment;
@@ -56,9 +57,16 @@ public class Home extends AppCompatActivity {
             @Override
             public void onSuccess(DocumentSnapshot documentSnapshot) {
                 Users user = documentSnapshot.toObject(Users.class);
-                Glide.with(Home.this)
-                        .load(user.getProfilePhoto())
-                        .into(avt);
+                if (user != null) {
+                    Glide.with(Home.this)
+                            .load(user.getProfilePhoto())
+                            .into(avt);
+                } else {
+                    FirebaseAuth.getInstance().signOut();
+                    Intent intent = new Intent(Home.this, Login.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK );
+                    startActivity(intent);
+                }
             }
         });
         avt.setAlpha(0.6f);

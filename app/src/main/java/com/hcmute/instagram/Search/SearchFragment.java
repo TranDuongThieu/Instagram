@@ -16,16 +16,22 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.hcmute.instagram.R;
 import com.hcmute.instagram.Utils.SearchUsersAdapter;
 import com.hcmute.instagram.models.Users;
@@ -52,6 +58,7 @@ public class SearchFragment extends Fragment {
 
         mUser = new ArrayList<>();
         readUsers();
+
         search.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -76,49 +83,50 @@ public class SearchFragment extends Fragment {
 
     private void searchUsers(String s){
 
-        Query query = FirebaseDatabase.getInstance().getReference("Users").orderByChild("username")
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference usersRef = db.collection("Users");
+
+        Query query = usersRef.orderBy("username")
                 .startAt(s)
-                .endAt(s+"\uf8ff");
-        query.addValueEventListener(new ValueEventListener() {
+                .endAt(s + "\uf8ff");
+
+        query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
                 mUser.clear();
-                for(DataSnapshot dataSnapshot : snapshot.getChildren()){
-                    Users users = dataSnapshot.getValue(Users.class);
-                    mUser.add(users);
+                if (task.isSuccessful()) {
+                    for (QueryDocumentSnapshot document : task.getResult()) {
+                        Users user = document.toObject(Users.class);
+                        mUser.add(user);
+                    }
+                    updateSearchList();
+                } else {
+                    Log.d(TAG, "Error getting documents: ", task.getException());
                 }
-                updateSearchList();
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-
             }
         });
-
     }
 
     private void readUsers(){
-        DatabaseReference reference =FirebaseDatabase.getInstance().getReference("Users");
-        reference.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if(search.getText().toString().equals("")){
-                    mUser.clear();
-                    for(DataSnapshot snapshot1:snapshot.getChildren()){
-                        Users users = snapshot1.getValue(Users.class);
-                        mUser.add(users);
+
+        FirebaseFirestore.getInstance().collection("Users").get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (search.getText().toString().equals("")) {
+                            mUser.clear();
+                            if (task.isSuccessful()) {
+                                for (QueryDocumentSnapshot document : task.getResult()) {
+                                    Users users = document.toObject(Users.class);
+                                    mUser.add(users);
+                                }
+                                updateSearchList();
+                            } else {
+                                Log.d(TAG, "Error getting documents: ", task.getException());
+                            }
+                        }
                     }
-                    updateSearchList();
-
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-
-            }
-        });
+                });
     }
 
     public void onResume() {
