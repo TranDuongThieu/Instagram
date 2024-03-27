@@ -42,7 +42,6 @@ public class ViewComments extends AppCompatActivity {
 
     private static final String TAG ="ViewComments" ;
 
-
     //widgets
     private ImageView mBackArrow;
     private EditText mComment;

@@ -33,17 +33,25 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.auth.User;
 import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
+import com.hcmute.instagram.Home;
 import com.hcmute.instagram.Login;
+import com.hcmute.instagram.Post.PostActivity;
 import com.hcmute.instagram.R;
 import com.hcmute.instagram.models.Users;
 import com.hcmute.instagram.models.privatedetails;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.UUID;
+
 public class EditProfile extends AppCompatActivity {
 
-    ImageView mProfilePhoto;
+    ImageView mProfilePhoto, closeProfile;
     TextInputEditText name, username, bio, website;
     String Name, Username, Bio, Website, profile;
     DatabaseReference databaseReference, data;
@@ -56,10 +64,19 @@ public class EditProfile extends AppCompatActivity {
     int PICK_IMAGE_REQUEST = 1;
     Uri imageUri;
 
+    String RandomUId,userId;
+    String postCount;
+    int count = 0;
+    String caption,tags;
+    StorageReference ref;
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_profile);
+        userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         mProfilePhoto = (ImageView) findViewById(R.id.user_img);
         name = (TextInputEditText) findViewById(R.id.Namee);
         username = (TextInputEditText) findViewById(R.id.Usernamee);
@@ -70,8 +87,7 @@ public class EditProfile extends AppCompatActivity {
         Phonenumber = (TextView) findViewById(R.id.phonenumber);
         Gender = (TextView) findViewById(R.id.gender);
         Birth = (TextView) findViewById(R.id.birth);
-
-
+        closeProfile = (ImageView) findViewById(R.id.close);
         storageReference = FirebaseStorage.getInstance().getReference();
 
 
@@ -102,10 +118,9 @@ public class EditProfile extends AppCompatActivity {
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Log.d("TAG", "Error getting user document: " + e);
+                        Log.d("TAG", "Error gettin g user document: " + e);
                     }
                 });
-
         CollectionReference privateDetailsCollectionRef = db.collection("Users").document(userId).collection("PrivateDetails");
 
         privateDetailsCollectionRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
@@ -115,7 +130,6 @@ public class EditProfile extends AppCompatActivity {
                     Log.w("TAG", "Listen failed.", e);
                     return;
                 }
-
                 for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots.getDocuments()) {
                     privatedetails privateDetails = documentSnapshot.toObject(privatedetails.class);
                     // Assuming you have only one document in "PrivateDetails" subcollection
@@ -123,12 +137,12 @@ public class EditProfile extends AppCompatActivity {
                     Phonenumber.setText(privateDetails.getPhoneNumber());
                     Gender.setText(privateDetails.getGender());
                     Birth.setText(privateDetails.getBirthdate());
+
                 }
             }
         });
 
 //************************************************************************
-
 
         mProfilePhoto.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -143,6 +157,7 @@ public class EditProfile extends AppCompatActivity {
                 Username = username.getText().toString().trim();
                 Bio = bio.getText().toString().trim();
                 Website = website.getText().toString().trim();
+                uploadImage();
                 DocumentReference userRefDoc = db.collection("Users").document(userId);
 
                 // Check if the username already exists
@@ -152,62 +167,44 @@ public class EditProfile extends AppCompatActivity {
                 mDialog.setMessage("Updating...");
                 mDialog.show();
 
-                userRefDoc.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-                    @Override
-                    public void onSuccess(DocumentSnapshot documentSnapshot) {
-                        if (documentSnapshot.exists()) {
-                            String userNameGet = documentSnapshot.getString("username");
-                            db.collection("Users")
-                                    .whereEqualTo("username", Username)
-                                    .whereNotEqualTo("user_id", userId)
-                                    .get()
-                                    .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                                        @Override
-                                        public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-//                                                String uidGet = queryDocumentSnapshots
-                                            if (!queryDocumentSnapshots.isEmpty()) {
-                                                // Username already exists
-                                                Toast.makeText(getApplicationContext(), "Username already exists. Please try another username.", Toast.LENGTH_SHORT).show();
-                                            } else {
-                                                // Username is available, update user information
-                                                userRefDoc.update("fullName", Name,
-                                                                "username", Username,
-                                                                "description", Bio)
-                                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                            @Override
-                                                            public void onSuccess(Void aVoid) {
-                                                                Log.i("SUBMIT", "onSuccess: " + Name + Username);
-                                                                mDialog.dismiss();
-
-                                                                Toast.makeText(getApplicationContext(), "User information updated successfully!", Toast.LENGTH_SHORT).show();
-                                                                // You can perform further actions after updating user information here
-                                                            }
-                                                        })
-                                                        .addOnFailureListener(new OnFailureListener() {
-                                                            @Override
-                                                            public void onFailure(@NonNull Exception e) {
-                                                                mDialog.dismiss();
-
-                                                                Log.e("Error", "Error updating user information: " + e.getMessage());
-                                                            }
-                                                        });
-                                            }
-                                        }
-                                    })
-                                    .addOnFailureListener(new OnFailureListener() {
-                                        @Override
-                                        public void onFailure(@NonNull Exception e) {
-                                            mDialog.dismiss();
-                                            
-                                            Log.e("Error", "Error checking username existence: " + e.getMessage());
-                                        }
-                                    });
-
-                        }
-                    }
-                });
-
-                DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users");
+                db.collection("Users")
+                        .whereEqualTo("username", Username)
+                        .whereNotEqualTo("user_id", userId)
+                        .get()
+                        .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                            @Override
+                            public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+//                                               String uidGet = queryDocumentSnapshots
+                                Log.i("SUBMIT", "onSuccess: 3" );
+                                if (!queryDocumentSnapshots.isEmpty()) {
+                                    // Username already exists
+                                    Toast.makeText(getApplicationContext(), "Username already exists. Please try another username.", Toast.LENGTH_SHORT).show();
+                                    mDialog.dismiss();
+                                } else {
+                                    // Username is available, update user information
+                                    userRefDoc.update("description", Bio, "fullName", Name,
+                                                    "username", Username)
+                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                @Override
+                                                public void onSuccess(Void aVoid) {
+                                                    Log.i("SUBMIT", "onSuccess: " + Name + Username);
+                                                    mDialog.dismiss();
+                                                    Toast.makeText(getApplicationContext(), "User information updated successfully!", Toast.LENGTH_SHORT).show();
+                                                    // You can perform further actions after updating user information here
+                                                }
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    mDialog.dismiss();
+                                                    Log.e("Error", "Error updating user information: " + e.getMessage());
+                                                }
+                                            });
+                                }
+                            }
+                        });
+            }
+            DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("Users");
 //                userRef.orderByChild("username").equalTo(Username).addListenerForSingleValueEvent(new ValueEventListener() {
 //                    @Override
 //                    public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -215,7 +212,7 @@ public class EditProfile extends AppCompatActivity {
 //                            Toast.makeText(EditProfile.this, "Username already exists. Please try another username.", Toast.LENGTH_SHORT).show();
 //                        } else {
 //                            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-//                            DatabaseReference currentUserRef = userRef.child(userId);
+//
 //
 //                            // Update user profile
 //                            currentUserRef.child("fullName").setValue(Name);
@@ -258,10 +255,14 @@ public class EditProfile extends AppCompatActivity {
 //                        // Handle onCancelled
 //                    }
 //                });
-            }
 
         });
-
+        closeProfile.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
     }
 
     private void openFileChooser() {
@@ -278,13 +279,43 @@ public class EditProfile extends AppCompatActivity {
                 && data != null && data.getData() != null) {
             imageUri = data.getData();
             mProfilePhoto.setImageURI(imageUri);
-
         }
-
         super.onActivityResult(requestCode, resultCode, data);
     }
 
+    private void uploadImage() {
+        if (imageUri != null) {
+            // Tạo tham chiếu tới Firebase Storage
+            StorageReference storageRef = FirebaseStorage.getInstance().getReference();
+            // Tạo tham chiếu đến ảnh cụ thể trong Storage
+            StorageReference profilePhotoRef = storageRef.child("photos/users/" + userId + "/profilephoto");
 
+            // Upload ảnh lên Storage
+            profilePhotoRef.putFile(imageUri)
+                    .addOnSuccessListener(taskSnapshot -> {
+                        // Nếu upload thành công, lấy đường dẫn đến ảnh
+                        profilePhotoRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                            // Lấy đường dẫn của ảnh
+                            String imageUrl = uri.toString();
+                            // Gán đường dẫn vào thuộc tính "profilePhoto" trong tài liệu người dùng
+                            FirebaseFirestore db = FirebaseFirestore.getInstance();
+                            DocumentReference userDocRef = db.collection("Users").document(userId);
+                            userDocRef.update("profilePhoto", imageUrl)
+                                    .addOnSuccessListener(aVoid -> {
+                                        Log.i("UPLOAD", "Image URL updated successfully: " + imageUrl);
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        // Xử lý khi cập nhật thất bại
+                                        Log.e("UPLOAD", "Failed to update image URL: " + e.getMessage());
+                                    });
+                        });
+                    })
+                    .addOnFailureListener(e -> {
+                        // Xử lý khi upload ảnh thất bại
+                        Log.e("UPLOAD", "Failed to upload image: " + e.getMessage());
+                    });
+        }
+    }
 //        https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.vexels.com%2Fpng-svg%2Fpreview%2F147102%2Finstagram-profile-icon&psig=AOvVaw0Liq2WBgqkhzMz_UQkcP5T&ust=1600009441788000&source=images&cd=vfe&ved=0CAIQjRxqFwoTCIiNu-nx4-sCFQAAAAAdAAAAABAD
 
 }

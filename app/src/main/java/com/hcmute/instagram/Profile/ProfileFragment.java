@@ -39,13 +39,17 @@ import java.util.Map;
 
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.hcmute.instagram.R;
 import com.hcmute.instagram.Utils.GridImageAdapter;
 import com.hcmute.instagram.models.Comments;
 import com.hcmute.instagram.models.Likes;
 import com.hcmute.instagram.models.Photo;
 import com.hcmute.instagram.models.Users;
+import com.hcmute.instagram.models.privatedetails;
 
 public class ProfileFragment extends Fragment {
 
@@ -122,7 +126,21 @@ public class ProfileFragment extends Fragment {
                         Log.d("TAG", "Error getting documents: " + e);
                     }
                 });
+        CollectionReference privateDetailsCollectionRef = db.collection("Users").document(userId).collection("PrivateDetails");
 
+        privateDetailsCollectionRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                if (e != null) {
+                    Log.w("TAG", "Listen failed.", e);
+                    return;
+                }
+                for (DocumentSnapshot documentSnapshot : queryDocumentSnapshots.getDocuments()) {
+                    privatedetails privateDetails = documentSnapshot.toObject(privatedetails.class);
+
+                }
+            }
+        });
 
         account_setting_menu.setOnClickListener(new View.OnClickListener() {
             @Override

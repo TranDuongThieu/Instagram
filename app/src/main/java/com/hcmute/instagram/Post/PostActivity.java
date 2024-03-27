@@ -65,6 +65,7 @@ public class PostActivity extends AppCompatActivity {
         AddedTag = (EditText)findViewById(R.id.added_tags);
 
         storageReference = FirebaseStorage.getInstance().getReference();
+        // thời gian thực
         databaseReference = FirebaseDatabase.getInstance().getReference();
 
         method = new methods();
@@ -86,8 +87,6 @@ public class PostActivity extends AppCompatActivity {
         });
 
         openFileChooser();
-
-
 
     }
 
@@ -201,9 +200,6 @@ public class PostActivity extends AppCompatActivity {
 
             }
         });
-
-
-
     }
 
 //******************************FUNCTION TO GET POST TIME********
